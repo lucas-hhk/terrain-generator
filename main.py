@@ -3,7 +3,7 @@ import tkinter as tk
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from tktooltip import ToolTip
+from CTkToolTip import *
 from PIL import Image
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -37,8 +37,9 @@ def plot():
     if option == 'Basic cellular automaton':
         iterations = int(iterations_slider.get())
         density = int(density_slider.get())
-        map = noise_grid(map, density, map_width, map_height, islandchoice.get())
-        animation = createanimation(map, iterations, map_width, map_height)
+        ca = CellularAutomaton(map, density, map_width, map_height, islandchoice.get())
+        grid = ca.noise_grid()
+        animation = createanimation(ca, iterations, map_width, map_height)
 
         newfilename = next_filename("map", ".gif")
         animation.save(filename=f"Saved/{newfilename}", writer="pillow")
@@ -47,17 +48,20 @@ def plot():
         freq = freq_slider.get()
         amp = amp_slider.get()
         fractalLevel = fractaliser.get()
-        map = opensimplex(map, freq, amp, 2, 0.5, islandchoice.get(), map_width, map_height, fractalLevel)
-        plotmap(map)
+        config = NoiseConfig(freq, amp, 2, 0.5, fractalLevel)
+        emptymap = NoiseGenerator(map, map_width, map_height, config, islandchoice.get())
+        island = emptymap.opensimplex()
+        plotmap(island)
         newfilename = next_filename("simplex", ".png")
         fig.savefig(f"Saved/{newfilename}", bbox_inches="tight")
     
     elif option == 'Perlin noise':
         freq = freq_slider_perlin.get()
         amp = amp_slider_perlin.get()
-        fractalLevel = fractaliser_perlin.get()
-        map = perlinnoise2(map, freq, amp, 2, 0.5, islandchoice.get(), map_width, map_height, fractalLevel)
-        plotmap(map)
+        config = NoiseConfig(freq, amp, 2, 0.5, fractalLevel)
+        emptymap = NoiseGenerator(map, map_width, map_height, config, islandchoice.get())
+        island = emptymap.perlinnoise2()
+        plotmap(island)
         newfilename = next_filename("perlin", ".png")
         fig.savefig(f"Saved/{newfilename}", bbox_inches="tight")
 
@@ -65,13 +69,19 @@ def plot():
 def plotmap(grid):
 
     axes.set_axis_off()
-    #cmap = ListedColormap(["lawngreen", "aquamarine"])
 
-    colours = [(0, colors["deepocean"]), (0.37, colors["water"]), (0.46,colors["sand"]), (0.47, colors["wetsand"]), (0.56, colors["grass"]), (0.65,colors["darkforest"]),
-                (0.80,'darkgray'), (0.85,'lightgray'), (1,'white')]
+    colours = [(0, colors["deepocean"]), 
+               (0.37, colors["water"]), 
+               (0.46,colors["sand"]), 
+               (0.47, colors["wetsand"]), 
+               (0.56, colors["grass"]), 
+               (0.65,colors["darkforest"]),
+                (0.80,'darkgray'), 
+                (0.85,'lightgray'), 
+                (1,'white')]
     colourmap = LinearSegmentedColormap.from_list('colourmap',colours, 256)
     #colourmap = colourmap(np.array([0, 0.5,0.53,0.56,0.7,0.73,0.87,1]))
-    axes.imshow(grid, cmap=colourmap, interpolation="None") 
+    axes.imshow(grid, cmap=colourmap, interpolation="bilinear") 
     canvas.draw()
 
 def openimages():
@@ -79,20 +89,19 @@ def openimages():
     os.startfile(path)
 ################ CELLULAR AUTOMATON #######################
  
+#automaton is an object plotting. It contains the actual map, methods to generate the value noise grid, and apply the cellular automaton
+def createanimation(automaton, totalframes):
 
-def createanimation(map, totalframes, map_width, map_height):
-    #axes = fig.axes()
-    #axes.set_axis_off()
     cmap = ListedColormap(["lawngreen","royalblue"])
     #fig.colorbar(plt.cm.ScalarMappable(cmap=cmap), label='Colours', shrink=0.5, ax=axes)
-    im = axes.imshow(map, cmap=cmap)
-    def animate(i, map, map_width, map_height):
+    im = axes.imshow(automaton.map, cmap=cmap)
+    def animate(i, automaton):
 
-        map = cellular_automaton(map, map_width, map_height)
+        map = automaton.cellular_automaton()
         im.set_array(map)
         canvas.draw()   #UPDATE CANVAS PER ANIMATION WITHIN EVENT LOOP. matplotlib canvas has no automatic redraw upon update
         return [im]
-    animation = FuncAnimation(fig, animate, frames=totalframes, interval=200, repeat=False, fargs=[map, map_width, map_height], blit=True)
+    animation = FuncAnimation(fig, animate, frames=totalframes, interval=200, repeat=False, fargs=[automaton], blit=True)
 
     return animation
 
@@ -152,9 +161,6 @@ def combobox_callback(choice):
     print("combobox dropdown clicked:", choice)
     framelist[choice].tkraise()
 
-    
-def update_algorithm_change(option):
-    return
 combobox_var = customtkinter.StringVar(value="Algorithm")
 combobox = customtkinter.CTkComboBox(leftframe, values=["Basic cellular automaton", "OpenSimplex noise", "Perlin noise"],
                                      command=combobox_callback, variable=combobox_var, width=300, justify='center')
@@ -206,7 +212,7 @@ fractaliser.set(1.00)
 fractaliser.grid(row=4, column=0, columnspan=2)
 fractaliser_value = customtkinter.CTkLabel(simplexframe, text="Level: ")
 fractaliser_value.grid(row=5, column=0, columnspan=2)
-ToolTip(fractaliser_label, msg="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0, follow=False)
+t1=CTkToolTip(fractaliser, message="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0, follow=False)
 
 
 ######################perlin noise###############################
@@ -231,7 +237,7 @@ fractaliser_perlin.set(0.25)
 fractaliser_perlin.grid(row=4, column=0, columnspan=2)
 fractaliser_value_perlin = customtkinter.CTkLabel(perlinframe, text="Level: ")
 fractaliser_value_perlin.grid(row=5, column=0, columnspan=2)
-ToolTip(fractaliser_label_perlin, msg="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0)
+t2=CTkToolTip(fractaliser_label_perlin, message="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0)
 
 ###### Stack all settings frames on top of each other ##############
 for frames in framelist.values():
