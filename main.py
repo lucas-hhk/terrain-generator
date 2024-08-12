@@ -245,3 +245,221 @@ for frames in framelist.values():
 ####################
 
 window.mainloop()
+
+class App(customtkinter.CTk):
+    def __init__(self):
+        super().__init__()
+
+
+        self.title('Procedural map generator')
+        self.geometry("1025x600")
+        self.resizable(0, 0)
+
+        # Canvas frame
+        self.rightframe = customtkinter.CTkFrame(master=self)
+        self.rightframe.grid(row=0,column=1,padx=15,pady=15, sticky="nsew")
+        self.rightframe.grid_rowconfigure(0, weight=1)
+        self.rightframe.grid_columnconfigure((0, 1), weight=1)
+
+        self.fig = Figure(figsize=(7,7))
+        self.axes = self.fig.add_subplot(111)
+        self.axes.set_axis_off()
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.rightframe)
+        self.canvas.draw()
+
+        self.canvas.get_tk_widget().grid(row=0, column=0)
+
+        # All settings and execute buttons
+        self.leftframe = customtkinter.CTkFrame(master=self)
+        self.leftframe.grid(row=0,column=0,padx=15,pady=15, sticky="ew")
+
+        self.icon = customtkinter.CTkImage(Image.open("icon.png"), size=(50,50))
+        self.opendir_button = customtkinter.CTkButton(master=self.leftframe, width=50, height=50, image=self.icon, text="", fg_color='transparent', hover_color="#2B2B2B", command=self.openimages)
+        self.opendir_button.grid(row=0, column=0, sticky="w")
+        self.plot_button = customtkinter.CTkButton(master=self.leftframe, text="Plot", width=200, command=self.plot, height=50, border_color="aqua", border_width = 2)
+        self.plot_button.grid(row=0, column=0, pady=5)
+
+        self.dimensions_label = customtkinter.CTkLabel(master=self.leftframe, text="Map dimensions", pady = 5, font=('Helvetica',13,'bold'))
+        self.dimensions_label.grid(row=1, column=0)
+
+        self.dimensions_slider = customtkinter.CTkSlider(master=self.leftframe, from_=128, to=2048, number_of_steps=15, command=lambda val:self.slider_value(val, self.dimension_value))
+        self.dimensions_slider.grid(row=2, column=0)
+        self.dimensions_slider.set(256)
+
+        self.dimension_value = customtkinter.CTkLabel(master=self.leftframe, text="Value: 256")
+        self.dimension_value.grid(row=3, column=0)
+
+        self.combobox_var = customtkinter.StringVar(value="Algorithm")
+        self.combobox = customtkinter.CTkComboBox(self.leftframe, values=["Basic cellular automaton", "OpenSimplex noise", "Perlin noise"],
+                                            command=self.combobox_callback, variable=self.combobox_var, width=300, justify='center')
+        self.combobox_var.set("Algorithm")
+        self.combobox.grid(row=4, column=0,pady=40)
+
+        self.islandchoice = customtkinter.CTkSwitch(self.leftframe, text="Generate island")
+        self.islandchoice.grid(row=6, column=0, columnspan=2, pady=10)
+
+        ##### framelist containing all settings frames ###############
+        self.framelist = {}
+        self.settings_frame = customtkinter.CTkFrame(master=self.leftframe, width=350, height=400)
+
+        ##### cellular automaton settings sliders ##########
+        self.ca_frame = customtkinter.CTkFrame(master=self.leftframe, width=350, height=400)
+        self.framelist['Basic cellular automaton'] = self.ca_frame
+        self.iterations_label = customtkinter.CTkLabel(self.ca_frame, text="Iterations")
+        self.iterations_slider = customtkinter.CTkSlider(self.ca_frame, from_=1, to=20, number_of_steps=19, command=lambda val:self.slider_value(val, self.iterations_value))
+        self.iterations_value = customtkinter.CTkLabel(self.ca_frame, text="Value: ")
+        self.density_label = customtkinter.CTkLabel(self.ca_frame, text="Density")
+        self.density_slider = customtkinter.CTkSlider(self.ca_frame, from_=0, to=100, number_of_steps=100, command=lambda val:self.slider_value(val, self.density_value))
+        self.density_value = customtkinter.CTkLabel(self.ca_frame, text="Value: ")
+
+        self.iterations_label.grid(row=0)
+        self.iterations_slider.grid(row=1,column=0)
+        self.iterations_value.grid(row=2, column=0)
+        self.density_label.grid(row=0, column=1)
+        self.density_slider.grid(row=1, column=1)
+        self.density_value.grid(row=2, column=1)
+
+        ######## simplex noise sttings ################
+        self.simplexframe = customtkinter.CTkFrame(master=self.leftframe, width=350, height=400)
+        self.framelist['OpenSimplex noise'] = self.simplexframe
+        self.freq_label = customtkinter.CTkLabel(self.simplexframe, text="Frequency")
+        self.freq_label.grid(row=0, column=0)
+        self.freq_slider = customtkinter.CTkSlider(self.simplexframe, from_=0.005, to= 0.05, number_of_steps=9, command=lambda val:self.slider_value(val, self.freq_value))
+        self.freq_slider.grid(row=1, column=0)
+        self.freq_value = customtkinter.CTkLabel(self.simplexframe, text="Value: ")
+        self.freq_value.grid(row=2, column=0)
+        self.amp_label = customtkinter.CTkLabel(self.simplexframe, text="Amplitude")
+        self.amp_label.grid(row=0, column=1)
+        self.amp_slider = customtkinter.CTkSlider(self.simplexframe, from_=32, to=256, number_of_steps=7, command=lambda val:self.slider_value(val, self.amp_value))
+        self.amp_slider.grid(row=1, column=1)
+        self.amp_value = customtkinter.CTkLabel(self.simplexframe, text="Value: ")
+        self.amp_value.grid(row=2, column=1)
+        self.fractaliser_label = customtkinter.CTkLabel(self.simplexframe, text="Fractaliser")
+        self.fractaliser_label.grid(row=3, column=0, columnspan=2)
+        self.fractaliser = customtkinter.CTkSlider(self.simplexframe, from_=0.5, to=1.5, number_of_steps=4, command=lambda val:self.slider_value(val, self.fractaliser_value))
+        self.fractaliser.set(1.00)
+        self.fractaliser.grid(row=4, column=0, columnspan=2)
+        self.fractaliser_value = customtkinter.CTkLabel(self.simplexframe, text="Level: ")
+        self.fractaliser_value.grid(row=5, column=0, columnspan=2)
+        self.t1=CTkToolTip(self.fractaliser, message="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0, follow=False)
+
+
+        ######################perlin noise###############################
+        self.perlinframe = customtkinter.CTkFrame(master=self.leftframe, width=350, height=400)
+        self.framelist['Perlin noise'] = self.perlinframe
+        self.freq_label_perlin = customtkinter.CTkLabel(self.perlinframe, text="Frequency")
+        self.freq_label_perlin.grid(row=0, column=0)
+        self.freq_slider_perlin = customtkinter.CTkSlider(self.perlinframe, from_=0.005, to= 0.05, number_of_steps=9, command=lambda val:self.slider_value(val, self.freq_value_perlin))
+        self.freq_slider_perlin.grid(row=1, column=0)
+        self.freq_value_perlin = customtkinter.CTkLabel(self.perlinframe, text="Value: ")
+        self.freq_value_perlin.grid(row=2, column=0)
+        self.amp_label_perlin = customtkinter.CTkLabel(self.perlinframe, text="Amplitude")
+        self.amp_label_perlin.grid(row=0, column=1)
+        self.amp_slider_perlin = customtkinter.CTkSlider(self.perlinframe, from_=32, to=256, number_of_steps=7, command=lambda val:self.slider_value(val, self.amp_value_perlin))
+        self.amp_slider_perlin.grid(row=1, column=1)
+        self.amp_value_perlin = customtkinter.CTkLabel(self.perlinframe, text="Value: ")
+        self.amp_value_perlin.grid(row=2, column=1)
+        self.fractaliser_label_perlin = customtkinter.CTkLabel(self.perlinframe, text="Fractaliser")
+        self.fractaliser_label_perlin.grid(row=3, column=0, columnspan=2)
+        self.fractaliser_perlin = customtkinter.CTkSlider(self.perlinframe, from_=0.1, to=0.6, number_of_steps=10, command=lambda val:self.slider_value(val, self.fractaliser_value_perlin))
+        self.fractaliser_perlin.set(0.25)
+        self.fractaliser_perlin.grid(row=4, column=0, columnspan=2)
+        self.fractaliser_value_perlin = customtkinter.CTkLabel(self.perlinframe, text="Level: ")
+        self.fractaliser_value_perlin.grid(row=5, column=0, columnspan=2)
+        self.t2=CTkToolTip(self.fractaliser_label_perlin, message="How chaotic should it be? Low is less chaotic to high is more chaotic. The default is probably best", delay=0)
+
+        for frames in self.framelist.values():
+            frames.grid(row=5, column=0, sticky='nsew')
+
+    ############ UPDATING SLIDERS #################
+    def slider_value(self, val, label):
+        label.configure(text=f"Value: {val:.3f}")
+
+    
+    def combobox_callback(self, choice):
+        print("combobox dropdown clicked:", choice)
+        self.framelist[choice].tkraise()
+
+    
+    def plot(self):
+        map_height = int(self.dimensions_slider.get())
+        map_width = int(self.dimensions_slider.get())
+        map = np.empty((map_width, map_height), dtype=float)
+        option = self.combobox.get()
+        if option == 'Basic cellular automaton':
+            iterations = int(self.iterations_slider.get())
+            density = int(self.density_slider.get())
+            #create cellular automaton object with empty map primed up
+            ca = CellularAutomaton(map, density, map_width, map_height, self.islandchoice.get())
+            grid = ca.noise_grid()  # modify object to have value noise grid (grid is unused variable)
+            animation = self.createanimation(ca, iterations, map_width, map_height)
+
+            newfilename = next_filename("map", ".gif")
+            animation.save(filename=f"Saved/{newfilename}", writer="pillow")
+
+        elif option == 'OpenSimplex noise':
+            freq = self.freq_slider.get()
+            amp = self.amp_slider.get()
+            fractalLevel = self.fractaliser.get()
+            config = NoiseConfig(freq, amp, 2, 0.5, fractalLevel)
+            emptymap = NoiseGenerator(map, map_width, map_height, config, self.islandchoice.get())
+            island = emptymap.opensimplex()
+            self.plotmap(island)
+            newfilename = next_filename("simplex", ".png")
+            self.fig.savefig(f"Saved/{newfilename}", bbox_inches="tight")
+        
+        elif option == 'Perlin noise':
+            freq = self.freq_slider_perlin.get()
+            amp = self.amp_slider_perlin.get()
+            fractalLevel = self.fractaliser_perlin.get()
+            config = NoiseConfig(freq, amp, 2, 0.5, fractalLevel)
+            emptymap = NoiseGenerator(map, map_width, map_height, config, self.islandchoice.get())
+            island = emptymap.perlinnoise2()
+            self.plotmap(island)
+            newfilename = next_filename("perlin", ".png")
+            self.fig.savefig(f"Saved/{newfilename}", bbox_inches="tight")
+
+        
+    def plotmap(self, grid):
+
+        self.axes.set_axis_off()
+
+        colours = [(0, colors["deepocean"]), 
+                (0.37, colors["water"]), 
+                (0.46,colors["sand"]), 
+                (0.47, colors["wetsand"]), 
+                (0.56, colors["grass"]), 
+                (0.65,colors["darkforest"]),
+                (0.80,'darkgray'), 
+                (0.85,'lightgray'), 
+                (1,'white')]
+        colourmap = LinearSegmentedColormap.from_list('colourmap',colours, 256)
+        #colourmap = colourmap(np.array([0, 0.5,0.53,0.56,0.7,0.73,0.87,1]))
+        self.axes.imshow(grid, cmap=colourmap, interpolation="bilinear") 
+        self.canvas.draw()
+
+    def openimages(self):
+        path = r"Saved"
+        os.startfile(path)
+    ################ CELLULAR AUTOMATON #######################
+    
+    #automaton is an object plotting. It contains the actual map, methods to generate the value noise grid, and apply the cellular automaton
+    def createanimation(self, automaton, totalframes):
+
+        cmap = ListedColormap(["lawngreen","royalblue"])
+        #fig.colorbar(plt.cm.ScalarMappable(cmap=cmap), label='Colours', shrink=0.5, ax=axes)
+        im = self.axes.imshow(automaton.map, cmap=cmap)
+        def animate(i, automaton):
+
+            map = automaton.cellular_automaton()
+            im.set_array(map)
+            self.canvas.draw()   #UPDATE CANVAS PER ANIMATION WITHIN EVENT LOOP. matplotlib canvas has no automatic redraw upon update
+            return [im]
+        animation = FuncAnimation(self.fig, animate, frames=totalframes, interval=200, repeat=False, fargs=[automaton], blit=True)
+
+        return animation
+
+customtkinter.set_appearance_mode("dark")
+app = App()
+app.mainloop()
