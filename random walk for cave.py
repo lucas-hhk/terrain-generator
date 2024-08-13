@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+# https://gist.github.com/dougmcnally/c8f3cf1b4d0740934ed4b028c4b67276
 
 n = 1024
 
