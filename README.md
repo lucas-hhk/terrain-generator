@@ -10,7 +10,7 @@ Cellular automata are discrete models of computation that create some beautiful 
 Generally, they require some grid of cells, where each cell has a neighbourhood consisting of the cells surrounding it.
 Each cell is assigned a state, and starts where $t=0$ at generation 1.
 According to a fixed rule, a new generation is created and all the states are updated.
-This cellular automaton uses a noise grid consisting of randomly assigned 0s and 1s, and checks each cell's Moore neighbourhood (all cells surrounding it) and decides whether to change its state. The automaton runs for the amount of iterations input by the user.
+This cellular automaton uses a noise grid consisting of randomly assigned 0s and 1s, and checks each cell's Moore neighbourhood (all cells surrounding it) and decides whether to change its state. A simple way of linking 0 and 1 to a map is setting 0 to be land and 1 to be water. The automaton runs for the amount of iterations input by the user.
 
 Perlin noise is a type of gradient noise, whereas the automaton used value noise. It's a complex algorithm that uses a random grid of 2D vectors and computes dot products between the offset vectors and random gradient vectors in each cell for all 4 vertices at a grid point (assuming in 2 dimensions). The noise grid is then interpolated. The two important settings that can be customised are:
 - Frequency 
@@ -21,7 +21,7 @@ Amplitude controls the intensity of these features, creating taller "peaks" and 
 
 OpenSimplex noise developed as an improvement to the original Perlin noise. It features a lower computational complexity at $O(n^2)$ for $n$ dimensions compared to Perlin noise's $O(n^{2^n})$ by using an improved method of splitting spaces into $n$-dimensional triangles. In 2D, this would mean it operates on 3 vertices instead of 4 too. It also features less artifacts 
 
-For all 3 algorithms, the entire 2D array is modified. This creates a terrain that looks unrealistic as its like a repeating fractal pattern. To create an island, a gradient is applied externally by multiplying the terrain map with a circular or square gradient array of the same size, which is strongest in the middle and gets gradually weaker. 
+For all 3 algorithms, the entire 2D array is modified. This creates a terrain that looks unrealistic as its like a repeating fractal pattern. To create an island like structure for the OpenSimplex and Perlin noise, a gradient is applied externally by multiplying the terrain map with a square gradient array of the same size, which is strongest in the middle and gets gradually weaker. For the cellular automaton, the outer noise is removed by isolating a circle in the middle and settting the rest of the terrain to water. Additional smaller circles are isolated whose centres are in the central circle, and those are set to water if inside the big middle circle and have a chance to be reimplemented as land if outside the big middle circle. This is an attempt to try add some variety.
 
 The time of running the algorithms grows quadratically with the size of the array. Applying noise to a 512 x 512 array takes 4 times longer than to a 256 x 256 array. The algorithms are already complex, so leaving the size at 256 x 256 is recommended from tests.
 

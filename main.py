@@ -126,6 +126,10 @@ class CellularAutomatonSettings(customtkinter.CTkFrame):
         self.density_slider.grid(row=1, column=1)
         self.density_value.grid(row=2, column=1)
 
+        self.density_slider.set(60.0)
+
+        self.t = CTkToolTip(self.density_slider, message="Density of water in map. Quite a sensitive setting, 60 is nice")
+
 
 class NoiseSettings(customtkinter.CTkFrame):
     # all 3 settings are passed as tuples containing the start value, end value, and desired increment
